@@ -7,3 +7,7 @@
 
 # Testing
 __pycache__
+
+#models
+*.onnx
+*.onnx.json
