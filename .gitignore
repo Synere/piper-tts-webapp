@@ -1,0 +1,9 @@
+# Virtual environment
+.venv
+
+# Generated audio
+*.wav
+*.mp3
+
+# Testing
+__pycache__
