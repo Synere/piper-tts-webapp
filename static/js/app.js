@@ -28,9 +28,9 @@ const modelStatus = document.getElementById('modelStatus');
 
 /**
  * Display status messages in UI elements
- * @param {HTMLElement} element - DOM element to display status in
- * @param {string} message - Status message text (can include HTML)
- * @param {string} type - Status type ('success', 'error', 'info')
+ * element - DOM element to display status in
+ * message - Status message text (can include HTML)
+ * type - Status type ('success', 'error', 'info')
  */
 function showStatus(element, message, type) {
     element.innerHTML = `<div class="status ${type}">${message}</div>`;
