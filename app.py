@@ -2,6 +2,7 @@ import logging
 
 
 from pathlib import Path
+from piper import SynthesisConfig
 from flask import Flask, render_template, request
 from piper_python_wrapper import PiperPythonWrapper
 
@@ -129,7 +130,25 @@ def api_load_model():
         logger.error(f"Error loading model: {e}")
         return {"success": False, "error": str(e)}
 
-
+@app.route('/api/synthesis_config', methods=['POST'])
+def api_set_synthesis_config():
+    """TODO Set synthesis configuration"""
+    try:
+        
+        data = request.get_json()
+        
+        syn_config = SynthesisConfig()
+        
+        tts_wrapper.set_syn_config(syn_config)
+        
+        return {
+            "success": True,
+            "message": "Synthesis configuration updated"
+        }
+        
+    except Exception as e:
+        logger.error(f"Error setting synthesis config: {e}")
+        return {"success": False, "error": str(e)}
 
 # Error handlers
 @app.errorhandler(404)
