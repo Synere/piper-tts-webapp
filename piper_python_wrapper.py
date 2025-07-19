@@ -116,7 +116,7 @@ class PiperPythonWrapper:
 
         return self.use_cuda
 
-    def synthesize_wav_from_string(self, text: str, output_path: Union[str, Path] = "audio/output.wav"):
+    def synthesize_wav_from_string(self, text: str, output_path: Union[str, Path] = "static/audio/output.wav"):
 
         """
         Convert text to speech and save as WAV file.

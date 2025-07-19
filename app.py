@@ -1,8 +1,8 @@
 import logging
-
+import time
 
 from pathlib import Path
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, url_for, send_file
 from piper_python_wrapper import PiperPythonWrapper
 
 logging.basicConfig(level=logging.INFO)
@@ -96,7 +96,11 @@ def api_get_models():
 
 @app.route('/api/load_model', methods=['POST'])
 def api_load_model():
-    """Load a voice model, accepts JSON"""
+    """
+    
+    Load a voice model, accepts JSON
+    
+    """
     try:
         data = request.get_json()
         # JSON as dict
@@ -128,6 +132,60 @@ def api_load_model():
     except Exception as e:
         logger.error(f"Error loading model: {e}")
         return {"success": False, "error": str(e)}
+    
+@app.route('/api/generate', methods=['POST'])
+def api_generate():
+    """
+    
+    Generate speech from text
+    
+    """
+    try:
+        data = request.get_json()
+        text = data.get('text', '').strip()
+        
+        if not tts_wrapper.is_voice_loaded():
+            return {"success": False, "error": "No voice model loaded"}
+        
+        # Generate unique filename
+        timestamp = int(time.time())
+        filename = f"tts_output_{timestamp}.wav"
+        output_path = Path("static/audio") / filename
+        
+        # Generate speech
+        tts_wrapper.synthesize_wav_from_string(text, output_path)
+        
+        # Get audio file info
+        file_size = output_path.stat().st_size
+        
+        logger.info(url_for('serve_audio', filename=filename))
+
+        return {
+            "success": True,
+            "audio_url": url_for('serve_audio', filename=filename),
+            "filename": filename,
+            "file_size": file_size
+        }
+        
+    except Exception as e:
+        logger.error(f"Error generating speech: {e}")
+        return {"success": False, "error": str(e)}
+    
+# Audio serving
+@app.route('/audio/<filename>')
+def serve_audio(filename):
+    """
+    
+    Serve generated audio files
+    
+    """
+    file_path = Path("static/audio") / filename
+    
+    if not file_path.exists():
+        return "Audio file not found", 404
+    
+    
+    return send_file(file_path, mimetype='audio/wav')
 
 
 

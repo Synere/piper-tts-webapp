@@ -16,6 +16,11 @@ const charCount = document.getElementById('charCount');
 // Audio player
 const audioSection = document.getElementById('audioSection');
 const audioPlayer = document.getElementById('audioPlayer');
+const audioInfo = document.getElementById('audioInfo');
+const playBtn = document.getElementById('playBtn');
+const pauseBtn = document.getElementById('pauseBtn');
+const downloadBtn = document.getElementById('downloadBtn');
+
 
 // Status
 const generateStatus = document.getElementById('generateStatus');
@@ -66,6 +71,77 @@ loadModelBtn.addEventListener('click', async function() {
     } finally {
         this.disabled = false;
         this.textContent = 'Load Selected Model';
+    }
+});
+
+// Character counter
+textInput.addEventListener('input', function() {
+    charCount.textContent = this.value.length;
+});
+
+// Generate speech button
+generateBtn.addEventListener('click', async function() {
+    const text = textInput.value.trim();
+    
+    if (!text) {
+        showStatus(generateStatus, '❌ Please enter some text', 'error');
+        return;
+    }
+    
+    this.disabled = true;
+    this.textContent = '🔄 Generating...';
+    showStatus(generateStatus, '⏳ Generating speech...', 'info');
+    
+    try {
+        const response = await fetch('/api/generate', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({text: text})
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            // Global variable setting for download
+            currentAudioUrl = result.audio_url;
+            currentFilename = result.filename;
+
+            // Show audio section
+            audioSection.classList.remove('hidden');
+            audioPlayer.src = result.audio_url;
+            
+            // Update audio info
+            const sizeKB = Math.round(result.file_size / 1024);
+            audioInfo.textContent = `File: ${result.filename} (${sizeKB} KB)`;
+            
+            showStatus(generateStatus, '✅ Speech generated!', 'success');
+        } else {
+            showStatus(generateStatus, `❌ ${result.error}`, 'error');
+        }
+    } catch (error) {
+        showStatus(generateStatus, `❌ Error: ${error.message}`, 'error');
+    } finally {
+        this.disabled = false;
+        this.textContent = '🔊 Generate Speech';
+    }
+});
+
+
+// Audio controls
+playBtn.addEventListener('click', () => {
+    audioPlayer.play();
+});
+
+pauseBtn.addEventListener('click', () => {
+    audioPlayer.pause();
+});
+
+downloadBtn.addEventListener('click', function() {
+    if (currentAudioUrl) {
+        const a = document.createElement('a');
+        a.href = currentAudioUrl;
+        a.download = currentFilename || 'speech.wav';
+        a.click();
     }
 });
 
