@@ -26,19 +26,31 @@ const downloadBtn = document.getElementById('downloadBtn');
 const generateStatus = document.getElementById('generateStatus');
 const modelStatus = document.getElementById('modelStatus');
 
-// Utility function, change status panes
+/**
+ * Display status messages in UI elements
+ * @param {HTMLElement} element - DOM element to display status in
+ * @param {string} message - Status message text (can include HTML)
+ * @param {string} type - Status type ('success', 'error', 'info')
+ */
 function showStatus(element, message, type) {
     element.innerHTML = `<div class="status ${type}">${message}</div>`;
     element.classList.remove('hidden');
 }
 
-// Model selection handling
+/**
+ * Handle model selection changes
+ * Enables/disables the load model button based on selection
+ */
 modelSelect.addEventListener('change', function() {
     // If no model selected, value is blank
     loadModelBtn.disabled = !this.value;
 });
 
-// Load model button
+/**
+ * Handle load model button click
+ * Loads the selected voice model via API call
+ * Updates UI with loading state and results
+ */
 loadModelBtn.addEventListener('click', async function() {
     const modelPath = modelSelect.value;
     const useCuda = cudaCheckbox.checked;
@@ -74,12 +86,19 @@ loadModelBtn.addEventListener('click', async function() {
     }
 });
 
-// Character counter
+/**
+ * Handle text input changes
+ * Updates the character counter display
+ */
 textInput.addEventListener('input', function() {
     charCount.textContent = this.value.length;
 });
 
-// Generate speech button
+/**
+ * Handle generate speech button click
+ * Validates input text and sends API request to generate speech
+ * Updates UI with generation progress and results
+ */
 generateBtn.addEventListener('click', async function() {
     const text = textInput.value.trim();
     
@@ -127,15 +146,26 @@ generateBtn.addEventListener('click', async function() {
 });
 
 
-// Audio controls
+/**
+ * Handle play button click
+ * Starts audio playback
+ */
 playBtn.addEventListener('click', () => {
     audioPlayer.play();
 });
 
+/**
+ * Handle pause button click
+ * Pauses audio playback
+ */
 pauseBtn.addEventListener('click', () => {
     audioPlayer.pause();
 });
 
+/**
+ * Handle download button click
+ * Downloads the currently generated audio file
+ */
 downloadBtn.addEventListener('click', function() {
     if (currentAudioUrl) {
         const a = document.createElement('a');
@@ -146,7 +176,10 @@ downloadBtn.addEventListener('click', function() {
 });
 
 
-// Initialize webpage
+/**
+ * Initialize webpage on DOM content loaded
+ * Sets up initial state and checks for existing voice model
+ */
 document.addEventListener('DOMContentLoaded', function() {
     // Character count
     charCount.textContent = textInput.value.length;
