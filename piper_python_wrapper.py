@@ -28,6 +28,7 @@ class PiperPythonWrapper:
         """Initialize the wrapper with default settings."""
 
         self.voice: PiperVoice = None
+        self.model_path = None
         self.use_cuda: bool = False
         self.syn_config: SynthesisConfig = None
 
@@ -60,6 +61,7 @@ class PiperPythonWrapper:
             )
 
             self.voice = voice
+            self.model_path = str(model_path)
 
             load_time = time.time() - start_time
             logger.info(f"Voice loaded in {load_time:.2f}s: {model_path}")
@@ -104,6 +106,15 @@ class PiperPythonWrapper:
         """
 
         self.use_cuda = use_cuda
+
+    def get_use_cuda(self):
+
+        """
+        Check if CUDA GPU acceleration allowed.
+        
+        """
+
+        return self.use_cuda
 
     def synthesize_wav_from_string(self, text: str, output_path: Union[str, Path] = "audio/output.wav"):
 
