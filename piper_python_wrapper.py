@@ -27,13 +27,13 @@ class PiperPythonWrapper:
 
         """Initialize the wrapper with default settings."""
 
-        self.voice: PiperVoice = None
+        self.voice: Union[PiperVoice, None]= None
         self.model_path = None
         self.use_cuda: bool = False
-        self.syn_config: SynthesisConfig = None
+        self.syn_config: Union[SynthesisConfig, None] = None
 
 
-    def load_voice(self, model_path: Union[str, Path] = "models/default.onnx", config_path: Union[str, Path] = None):
+    def load_voice(self, model_path: Union[str, Path] = "models/default.onnx", config_path: Union[str, Path, None] = None):
 
         """
         Load a Piper voice model from disk.

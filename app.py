@@ -109,7 +109,13 @@ def api_status():
             - models_available (int): Number of available models
             - cuda_enabled (bool): Whether CUDA is enabled
     """
-
+    if tts_wrapper is None:
+        return {
+            "voice_loaded": False,
+            "model_path": '',
+            "models_available": 0,
+            "cuda_enabled": False  # Add actual CUDA detection
+        }
     return {
         "voice_loaded": tts_wrapper.is_voice_loaded() if tts_wrapper else False,
         "model_path": tts_wrapper.model_path,
@@ -157,6 +163,12 @@ def api_load_model():
         400: If no model path provided or file not found
         500: If model loading fails
     """
+    if tts_wrapper is None:
+        return {
+            "success": False, 
+            "error": "tts wrapper not initialized"
+        }
+
     try:
         data = request.get_json()
         # JSON as dict
@@ -216,6 +228,11 @@ def api_generate():
     Note:
         Generated files are saved to static/audio/ with timestamp-based names.
     """
+    if tts_wrapper is None:
+        return {
+            "success": False,
+            "error": "tts wrapper not initialized"
+        }
     try:
         data = request.get_json()
         text = data.get('text', '').strip()
