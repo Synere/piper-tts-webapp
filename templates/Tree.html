@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XML Tree Editor with TTS</title>
+    
+    <!-- Quill.js Rich Text Editor CSS -->
+    <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+    
+    <!-- jstree CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jstree/3.3.12/themes/default/style.min.css" />
+
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- PiperTTS Javascript wrapper for window.speech -->
+     <script src="{{ url_for('static', filename='js/piper_js_wrapper.js') }}"></script>
+
+    <!-- Custom Google Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        /* Custom styles for the app */
+        body {
+            font-family: 'Inter', sans-serif;
+            overflow: hidden; /* Prevent body scroll */
+        }
+
+        #container {
+            display: flex;
+            width: 100vw;
+            height: 100vh;
+            flex-direction: row; /* Default for desktop */
+        }
+
+        .pane {
+            overflow: auto;
+            padding: 1rem;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            transition: all 0.3s ease-in-out;
+        }
+
+        #left-pane {
+            width: 30%; /* Initial width for desktop */
+            min-width: 250px; 
+            height: 100%;
+            background-color: #f8fafc; /* light gray */
+            border-right: 1px solid #e2e8f0; /* slate-200 */
+            flex-shrink: 0;
+        }
+        
+        #right-pane {
+            flex-grow: 1; /* Takes remaining space */
+            background-color: #ffffff;
+            height: 100%;
+            min-width: 0; /* Fix for flexbox shrinking */
+        }
+
+        #vertical-slider {
+            width: 8px;
+            cursor: col-resize;
+            background-color: #cbd5e1; /* slate-300 */
+            transition: background-color 0.2s;
+            flex-shrink: 0;
+        }
+        #vertical-slider:hover { background-color: #94a3b8; }
+        
+        #horizontal-slider {
+            height: 8px;
+            cursor: row-resize;
+            background-color: #cbd5e1;
+            transition: background-color 0.2s;
+            flex-shrink: 0;
+            display: none; /* Hidden by default */
+        }
+        #horizontal-slider:hover { background-color: #94a3b8; }
+
+        /* Mobile-specific layout */
+        @media (max-width: 768px) {
+            #container {
+                flex-direction: column; /* Stack panes vertically */
+            }
+
+            #left-pane {
+                width: 100%;
+                height: 40vh; /* Tree takes 40% of vertical height */
+                min-height: 150px;
+                max-height: 80vh;
+                min-width: auto; /* Reset desktop min-width */
+                border-right: none;
+                border-bottom: 1px solid #e2e8f0;
+            }
+            
+            #left-pane.hidden {
+                height: 0;
+                min-height: 0;
+                padding: 0;
+                border: none;
+                overflow: hidden;
+            }
+
+            #right-pane {
+                height: auto; /* Allow it to fill remaining space */
+                flex-grow: 1;
+                min-height: 0; /* Allow this pane to shrink correctly */
+            }
+
+            #vertical-slider { display: none; }
+            #horizontal-slider { display: block; }
+            #horizontal-slider.hidden { display: none; }
+        }
+        
+        #editor-wrapper {
+            display: flex;
+            flex-direction: column;
+            flex-grow: 1;
+            min-height: 0;
+        }
+        #editor-container {
+            flex-grow: 1;
+            border-top: none;
+        }
+        .ql-toolbar { border-top-left-radius: 0.5rem; border-top-right-radius: 0.5rem; }
+        .ql-container { border-bottom-left-radius: 0.5rem; border-bottom-right-radius: 0.5rem; }
+
+        .jstree-default .jstree-anchor { line-height: 28px; height: 28px; }
+        .vakata-context { z-index: 10000; }
+
+        #blank-space-menu {
+            position: absolute;
+            z-index: 10001;
+            display: none;
+            background-color: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            padding: 0.5rem 0;
+        }
+        #blank-space-menu button {
+            display: block;
+            width: 100%;
+            text-align: left;
+            padding: 0.5rem 1rem;
+            font-size: 0.875rem;
+        }
+        #blank-space-menu button:hover { background-color: #f1f5f9; }
+        
+        .jstree-search { font-weight: bold; color: #0369a1; }
+        .search-toggle-btn.active { background-color: #3b82f6; color: white; }
+        .search-highlight-match { background-color: #fef08a; border-radius: 2px; }
+    </style>
+</head>
+<body class="bg-gray-100">
+
+    <div id="container">
+        <!-- Left Pane for Tree Structure -->
+        <div id="left-pane" class="pane">
+            <h2 class="text-xl font-bold mb-2 text-gray-800 border-b pb-2 flex-shrink-0 whitespace-nowrap">Content Structure</h2>
+            <div class="mb-2 flex-shrink-0">
+                <input type="text" id="search-input" placeholder="Search..." class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+            <div class="mb-3 flex-shrink-0">
+                <span class="text-sm text-gray-600 mr-2">Search by:</span>
+                <div class="inline-flex rounded-md shadow-sm" role="group">
+                    <button type="button" id="search-by-name" class="search-toggle-btn active px-3 py-1 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-l-lg hover:bg-gray-100 focus:z-10 focus:ring-2 focus:ring-blue-500">
+                        Name
+                    </button>
+                    <button type="button" id="search-by-content" class="search-toggle-btn px-3 py-1 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-r-md hover:bg-gray-100 focus:z-10 focus:ring-2 focus:ring-blue-500">
+                        Content
+                    </button>
+                </div>
+            </div>
+            <p class="text-xs text-gray-500 mb-3 flex-shrink-0">Right-click a node for options. Right-click empty space to Load/Save.</p>
+            <input type="file" id="load-xml-input" class="hidden" accept=".xml">
+            <div id="tree-view" class="flex-grow overflow-auto bg-white rounded-lg border border-gray-200 p-2"></div>
+        </div>
+
+        <!-- Draggable Sliders -->
+        <div id="vertical-slider"></div>
+        <div id="horizontal-slider"></div>
+
+        <!-- Right Pane for RTF Editor -->
+        <div id="right-pane" class="pane">
+            <div class="flex items-center space-x-4 border-b pb-2 mb-2 flex-shrink-0">
+                <button id="toggle-nav-btn" title="Toggle Navigation Panel" class="p-1 rounded-md hover:bg-gray-200 focus:outline-none">
+                    <svg class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+                </button>
+                <h2 class="text-xl font-bold text-gray-800">Editor</h2>
+            </div>
+            
+            <div id="editor-wrapper" class="bg-white rounded-lg border border-gray-200">
+                <div id="editor-container"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom context menu for blank area -->
+    <div id="blank-space-menu">
+        <button id="load-xml-btn">Load XML from File...</button>
+        <button id="save-xml-btn">Save Tree to XML File...</button>
+    </div>
+
+    <!-- Hidden audio element for PiperTTS -->
+    <audio id="piper-audio" style="display: none;"></audio>
+
+    <!-- jQuery -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    
+    <!-- jstree -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jstree/3.3.12/jstree.min.js"></script>
+    
+    <!-- Quill.js Rich Text Editor -->
+    <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
+
+    <script>
+        $(document).ready(function() {
+            // --- INITIALIZATION ---
+            const $tree = $('#tree-view');
+            const LOCAL_STORAGE_KEY = 'xmlTreeEditorData';
+            const synth = new PiperTTSWrapper();
+            let searchMode = 'name'; // 'name' or 'content'
+            let quill;
+
+            // --- TTS ICONS AND HANDLERS ---
+            const icons = Quill.import('ui/icons');
+            icons['speak'] = `<svg viewBox="0 0 18 18"><path d="M10.7,1.1c-0.4-0.3-1-0.3-1.4,0L4.2,5.2H2c-0.6,0-1,0.4-1,1v4.6c0,0.6,0.4,1,1,1h2.2l5.1,4.1c0.2,0.1,0.4,0.2,0.7,0.2c0.2,0,0.5-0.1,0.7-0.2c0.4-0.3,0.6-0.7,0.6-1.2V2.3C11.3,1.8,11.1,1.3,10.7,1.1z"></path><path d="M13.1,5.6c-0.2-0.2-0.5-0.2-0.7,0s-0.2,0.5,0,0.7c1.1,1.1,1.1,2.8,0,3.9c-0.2,0.2-0.2,0.5,0,0.7c0.1,0.1,0.2,0.1,0.4,0.1s0.3,0,0.4-0.1C14.8,9.5,14.8,7,13.1,5.6z"></path><path d="M15.2,3.4c-0.2-0.2-0.5-0.2-0.7,0s-0.2,0.5,0,0.7c2.2,2.2,2.2,5.9,0,8.1c-0.2,0.2-0.2,0.5,0,0.7c0.1,0.1,0.2,0.1,0.4,0.1s0.3,0,0.4-0.1C18,10.4,18,5.9,15.2,3.4z"></path></svg>`;
+            icons['pause'] = `<svg viewBox="0 0 18 18"><path d="M6,2.3v13.4c0,0.6-0.4,1-1,1s-1-0.4-1-1V2.3c0-0.6,0.4-1,1-1S6,1.8,6,2.3z"></path><path d="M13,2.3v13.4c0,0.6-0.4,1-1,1s-1-0.4-1-1V2.3c0-0.6,0.4-1,1-1S13,1.8,13,2.3z"></path></svg>`;
+            icons['resume'] = icons['play']; // Using Quill's built-in play icon for resume
+            icons['stop'] = `<svg viewBox="0 0 18 18"><path d="M14,4.2v9.6c0,0.6-0.4,1-1,1H5c-0.6,0-1-0.4-1-1V4.2c0-0.6,0.4-1,1-1h8C13.6,3.2,14,3.6,14,4.2z"></path></svg>`;
+            
+            // Define custom highlight format for Quill
+            const Parchment = Quill.import('parchment');
+            const HighlightClass = new Parchment.Attributor.Class('search-highlight', 'search-highlight-match', {
+                scope: Parchment.Scope.INLINE
+            });
+            Quill.register(HighlightClass);
+
+            quill = new Quill('#editor-container', {
+                theme: 'snow',
+                modules: { 
+                    toolbar: {
+                        container: [
+                            [{ 'header': [1, 2, 3, false] }],
+                            ['bold', 'italic', 'underline'], 
+                            [{ 'list': 'ordered'}, { 'list': 'bullet' }], 
+                            ['clean'],
+                            ['speak', 'pause', 'resume', 'stop']
+                        ],
+                        handlers: {
+                            'speak': () => {
+                                const range = quill.getSelection();
+                                speakText(range && range.length > 0 ? quill.getText(range.index, range.length) : quill.getText());
+                            },
+                            'pause': () => { synth.pause(); updateTTSButtons(); },
+                            'resume': () => { synth.resume(); updateTTSButtons(); },
+                            'stop': () => { synth.cancel(); updateTTSButtons(); }
+                        }
+                    }
+                },
+                placeholder: 'Select a node from the tree to edit its content...',
+            });
+            quill.disable();
+
+            const speakText = (text) => {
+                if (synth.speaking) synth.cancel();
+                const trimmedText = text ? text.trim() : '';
+                updateTTSButtons();
+                if (trimmedText) {
+                    const utterance = {
+                        text: trimmedText,
+                        onend: updateTTSButtons,
+                        onerror: (e) => { console.error('Speech synthesis error:', e); updateTTSButtons(); }
+                    };
+                    synth.speak(utterance);
+                }
+            };
+
+            const updateTTSButtons = () => {
+                const isSpeaking = synth.speaking, isPaused = synth.paused, hasText = quill.getLength() > 1;
+                const toolbar = quill.getModule('toolbar').container;
+                $(toolbar).find('.ql-speak').prop('disabled', isSpeaking || !hasText);
+                $(toolbar).find('.ql-pause').prop('disabled', !isSpeaking || isPaused);
+                $(toolbar).find('.ql-resume').prop('disabled', !isPaused);
+                $(toolbar).find('.ql-stop').prop('disabled', !isSpeaking);
+            };
+
+            // --- LOCAL STORAGE & DATA HANDLING ---
+            const saveTreeToLocalStorage = () => {
+                try {
+                    const treeJson = $tree.jstree(true).get_json('#', { flat: false });
+                    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(treeJson));
+                } catch (e) { console.error("Could not save tree to local storage:", e); }
+            };
+            const loadTreeFromLocalStorage = () => {
+                try {
+                    const storedData = localStorage.getItem(LOCAL_STORAGE_KEY);
+                    return storedData ? JSON.parse(storedData) : null;
+                } catch (e) { console.error("Could not load tree from local storage:", e); return null; }
+            };
+            const parseXmlToJsTree = (xmlString) => {
+                const parser = new DOMParser();
+                const xmlDoc = parser.parseFromString(xmlString, "application/xml");
+                if (xmlDoc.getElementsByTagName("parsererror").length) { alert("Error parsing XML file."); return []; }
+                const parseNode = (xmlNode) => ({
+                    text: xmlNode.getAttribute('name') || 'Untitled',
+                    children: Array.from(xmlNode.children).filter(c => c.tagName === 'node').map(parseNode),
+                    data: { content: (Array.from(xmlNode.children).find(c => c.tagName === 'content')?.innerHTML || '').trim() },
+                    state: { opened: xmlNode.getAttribute('opened') === 'true' }
+                });
+                const rootNode = xmlDoc.querySelector('nodes > node');
+                return rootNode ? [parseNode(rootNode)] : [];
+            };
+            const initialXml = `<nodes><node name="Project Alpha" opened="true"><content><![CDATA[<h1>Project Alpha Documentation</h1><p>This is the root node. All your project documentation will live under this main branch.</p>]]></content><node name="Chapter 1: Introduction" opened="true"><content><![CDATA[<h2>The beginning of the project</h2><p>Here you can describe the project's purpose, scope, and goals. Use lists, bold text, and headers to structure your thoughts.</p>]]></content></node><node name="Chapter 2: System Architecture"><content><![CDATA[<h2>System Design</h2><p>Detail the technical architecture here. You could discuss the frontend, backend, database schema, etc.</p>]]></content><node name="Frontend"><content><![CDATA[<h3>UI/UX</h3><p>The user interface is built with modern web technologies for a responsive experience.</p>]]></content></node><node name="Backend"><content><![CDATA[<h3>API and Services</h3><p>The backend provides a RESTful API for the frontend to consume.</p>]]></content></node></node><node name="Chapter 3: User Guide"><content><![CDATA[<h2>How to use the application</h2><p>A step-by-step guide for end-users. You can add screenshots (via URL) or links to videos.</p>]]></content></node><node name="Appendix"><content><![CDATA[<h2>Additional Resources</h2><p>Links, references, and other supplementary materials.</p>]]></content></node></node></nodes>`;
+
+            // --- JSTREE SETUP ---
+            const initializeTree = (data) => {
+                if ($tree.jstree(true)) { $tree.jstree(true).destroy(); }
+                $tree.jstree({
+                    'core': { 'data': data, 'check_callback': true, 'themes': { 'responsive': true, 'stripes': true } },
+                    'plugins': ['dnd', 'contextmenu', 'wholerow', 'search'],
+                    'contextmenu': {
+                        'items': (node) => ({
+                            "Create": { "label": "Add Child Node", "action": () => { const n = $tree.jstree(true).create_node(node, { text: 'New Node', data: { content: '' } }); $tree.jstree(true).edit(n); } },
+                            "Rename": { "label": "Rename", "action": () => { $tree.jstree(true).edit(node); } },
+                            "Delete": { "label": "Delete Node", "separator_before": true, "action": () => { if (confirm('Delete this node and all its children?')) { $tree.jstree(true).delete_node(node); } } }
+                        })
+                    },
+                    'search': {
+                        'case_insensitive': true,
+                        'show_only_matches': true,
+                        'search_callback': function (str, node) {
+                            if (!str) { return true; } // Show all nodes if search is empty
+                            if (searchMode === 'name') {
+                                return node.text.toLowerCase().includes(str.toLowerCase());
+                            } else { // searchMode === 'content'
+                                const contentHtml = node.data && node.data.content ? node.data.content : '';
+                                const tempDiv = document.createElement('div');
+                                tempDiv.innerHTML = contentHtml;
+                                const contentText = tempDiv.textContent || tempDiv.innerText || "";
+                                return contentText.toLowerCase().includes(str.toLowerCase());
+                            }
+                        }
+                    }
+                });
+            };
+            const initialData = loadTreeFromLocalStorage() || parseXmlToJsTree(initialXml);
+            initializeTree(initialData);
+
+            // --- UI ELEMENT SELECTORS & EVENT HANDLERS ---
+            const $leftPane = $('#left-pane');
+            const $verticalSlider = $('#vertical-slider');
+            const $horizontalSlider = $('#horizontal-slider');
+            const $searchInput = $('#search-input');
+            
+            // --- SLIDER LOGIC ---
+            let isVerticalDragging = false;
+            let isHorizontalDragging = false;
+
+            $verticalSlider.on('mousedown touchstart', () => { isVerticalDragging = true; $(document.body).css({ cursor: 'col-resize', userSelect: 'none' }); });
+            $horizontalSlider.on('mousedown touchstart', () => { isHorizontalDragging = true; $(document.body).css({ cursor: 'row-resize', userSelect: 'none' }); });
+
+            $(window).on('mousemove touchmove', (e) => {
+                const touch = e.originalEvent.touches ? e.originalEvent.touches[0] : e;
+                if (isVerticalDragging && !$leftPane.hasClass('hidden')) {
+                    $leftPane.width(touch.clientX);
+                }
+                if (isHorizontalDragging && !$leftPane.hasClass('hidden')) {
+                    $leftPane.height(touch.clientY);
+                }
+            });
+            $(window).on('mouseup touchend', () => {
+                isVerticalDragging = false;
+                isHorizontalDragging = false;
+                $(document.body).css({ cursor: 'default', userSelect: 'auto' });
+            });
+
+
+            // --- NAVIGATION TOGGLE ---
+            $('#toggle-nav-btn').on('click', () => {
+                $leftPane.toggleClass('hidden');
+                $verticalSlider.toggleClass('hidden');
+                $horizontalSlider.toggleClass('hidden');
+            });
+
+            // --- SEARCH ---
+            let searchTimeout = false;
+            $searchInput.on('keyup', function () {
+                if(searchTimeout) { clearTimeout(searchTimeout); }
+                searchTimeout = setTimeout(() => { $tree.jstree(true).search($(this).val(), false, true); }, 250);
+            });
+
+            $('.search-toggle-btn').on('click', function() {
+                $('.search-toggle-btn').removeClass('active');
+                $(this).addClass('active');
+                searchMode = $(this).attr('id') === 'search-by-name' ? 'name' : 'content';
+                $tree.jstree(true).search($searchInput.val(), false, true);
+            });
+            
+            // --- CORE EVENT LISTENERS ---
+            $tree.on('select_node.jstree', (e, data) => {
+                quill.enable();
+                quill.setContents(quill.clipboard.convert(data.node.data.content || ''), 'silent');
+                if (synth.speaking) synth.cancel();
+                updateTTSButtons();
+
+                setTimeout(() => {
+                    quill.formatText(0, quill.getLength(), 'search-highlight', false, 'silent');
+                    const searchTerm = $searchInput.val();
+                    if (searchMode === 'content' && searchTerm) {
+                        const text = quill.getText();
+                        const lowerCaseText = text.toLowerCase();
+                        const lowerCaseSearchTerm = searchTerm.toLowerCase();
+                        
+                        let startIndex = 0;
+                        while ((startIndex = lowerCaseText.indexOf(lowerCaseSearchTerm, startIndex)) !== -1) {
+                            quill.formatText(startIndex, lowerCaseSearchTerm.length, 'search-highlight', true, 'silent');
+                            startIndex += lowerCaseSearchTerm.length;
+                        }
+                    }
+                    quill.focus();
+                }, 0);
+            }).on('create_node.jstree rename_node.jstree delete_node.jstree move_node.jstree', saveTreeToLocalStorage);
+
+            // Add double-click to edit node name
+            $tree.on('dblclick.jstree', function (e) {
+                const instance = $.jstree.reference(e.target);
+                const node = instance.get_node(e.target);
+                if (node) {
+                    instance.edit(node);
+                }
+            });
+
+            quill.on('text-change', (delta, oldDelta, source) => {
+                if (source === 'user') {
+                    const node = $tree.jstree(true).get_node($tree.jstree(true).get_selected()[0]);
+                    if (node) { 
+                        node.data.content = quill.root.innerHTML; 
+                        saveTreeToLocalStorage();
+                    }
+                }
+                updateTTSButtons();
+            });
+
+            // --- BLANK SPACE CONTEXT MENU ---
+            const blankMenu = $('#blank-space-menu');
+            $tree.on('contextmenu', (e) => {
+                if ($(e.target).closest('.jstree-node').length === 0) {
+                    e.preventDefault();
+                    blankMenu.css({ top: e.pageY, left: e.pageX }).show();
+                }
+            });
+            $(document).on('click', () => blankMenu.hide());
+            blankMenu.on('click', (e) => e.stopPropagation());
+
+            $('#load-xml-btn').on('click', () => { $('#load-xml-input').click(); blankMenu.hide(); });
+            $('#load-xml-input').on('change', (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        try {
+                            const data = parseXmlToJsTree(event.target.result);
+                            if (data.length > 0) { initializeTree(data); saveTreeToLocalStorage(); }
+                        } catch (error) { alert('Failed to load XML.'); console.error(error); }
+                    };
+                    reader.readAsText(file);
+                }
+                $(this).val('');
+            });
+            
+            $('#save-xml-btn').on('click', () => {
+                const convertToXml = (nodes) => {
+                    let xml = '';
+                    nodes.forEach(node => {
+                        xml += `<node name="${node.text.replace(/"/g, '&quot;')}" opened="${node.state.opened}">`;
+                        xml += `<content><![CDATA[${node.data.content || ''}]]></content>`;
+                        if (node.children && node.children.length > 0) { xml += convertToXml(node.children); }
+                        xml += `</node>`;
+                    });
+                    return xml;
+                };
+                const treeJson = $tree.jstree(true).get_json('#');
+                const finalXml = `<nodes>\n${convertToXml(treeJson)}\n</nodes>`;
+                const blob = new Blob([finalXml], { type: 'application/xml;charset=utf-8' });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = 'tree_export.xml';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                blankMenu.hide();
+            });
+
+            // Initial button state check
+            setInterval(updateTTSButtons, 250);
+            updateTTSButtons();
+        });
+    </script>
+
+</body>
+</html>

@@ -14,3 +14,5 @@ __pycache__
 
 #local files
 split_js_file.js
+INTEGRATION_INSTRUCTIONS.md
+.claude/

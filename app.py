@@ -88,9 +88,7 @@ def index():
     # Get available model files
     model_files = get_model_files()
     
-    return render_template('index.html',
-                           model_files=model_files,
-                           voice_loaded=tts_wrapper.is_voice_loaded())
+    return render_template('Tree.html')
 
 
 
