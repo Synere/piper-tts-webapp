@@ -153,7 +153,18 @@
         .jstree-search { font-weight: bold; color: #0369a1; }
         .search-toggle-btn.active { background-color: #3b82f6; color: white; }
         .search-highlight-match { background-color: #fef08a; border-radius: 2px; }
-        
+
+        .jstree-default .jstree-striped {
+            background: none;
+        }
+
+        .jstree-default .jstree-node:nth-child(odd) > .jstree-wholerow {  
+            background-color: #f8f9fa;
+        }
+        .jstree-default .jstree-node:nth-child(even) > .jstree-wholerow {        
+            background-color: #ffffff;
+        }
+
         /* TTS Button styles */
         .ql-toolbar .ql-speak:disabled,
         .ql-toolbar .ql-pause:disabled,
@@ -162,6 +173,26 @@
             opacity: 0.4;
             pointer-events: none;
         }
+        
+        /* TTS Speed dropdown styles */
+        .ql-toolbar .ql-speed {
+            width: auto;
+        }
+        .ql-toolbar .ql-speed select {
+            background: white;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+            padding: 2px 6px;
+            font-size: 12px;
+            height: 24px;
+            outline: none;
+        }
+        .ql-toolbar .ql-speed select:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 1px #3b82f6;
+        }
+
+
     </style>
 </head>
 <body class="bg-gray-100">
@@ -258,7 +289,7 @@
                             ['bold', 'italic', 'underline'], 
                             [{ 'list': 'ordered'}, { 'list': 'bullet' }], 
                             ['clean'],
-                            ['speak', 'pause', 'resume', 'stop']
+                            ['speak', 'pause', 'resume', 'stop', 'speed']
                         ],
                         handlers: {
                             'speak': () => {
@@ -274,6 +305,29 @@
                 placeholder: 'Select a node from the tree to edit its content...',
             });
             quill.disable();
+
+            // Add custom speed dropdown to toolbar
+            const toolbar = quill.getModule('toolbar');
+            const speedButton = toolbar.container.querySelector('.ql-speed');
+            if (speedButton) {
+                speedButton.innerHTML = `
+                    <select class="ql-speed-select">
+                        <option value="0.9">0.9x</option>
+                        <option value="0.95">0.95x</option>
+                        <option value="1" selected>1x</option>
+                        <option value="1.25">1.25x</option>
+                        <option value="1.5">1.5x</option>
+                        <option value="2">2x</option>
+                    </select>
+                `;
+                
+                // Add event listener for speed changes
+                const speedSelect = speedButton.querySelector('.ql-speed-select');
+                speedSelect.addEventListener('change', function() {
+                    const speed = parseFloat(this.value);
+                    synth.setPlaybackRate(speed);
+                });
+            }
 
             const speakText = (text) => {
                 if (synth.speaking) synth.cancel();

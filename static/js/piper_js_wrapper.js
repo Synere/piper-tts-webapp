@@ -3,6 +3,7 @@ class PiperTTSWrapper {
         this.speaking = false;
         this.paused = false;
         this.audio = document.getElementById('piper-audio');
+        this.audio_rate = 1;
         this.currentUtterance = null;
         this.modelLoaded = false;
         this.initializeModel();
@@ -63,6 +64,7 @@ class PiperTTSWrapper {
             
             if (result.success) {
                 this.audio.src = result.audio_url;
+                this.audio.playbackRate = this.audio_rate;
                 this.audio.play();
             } else {
                 this.speaking = false;
@@ -95,4 +97,9 @@ class PiperTTSWrapper {
         this.audio.src = '';
         this.currentUtterance = null;
     }
+
+    setPlaybackRate(rate) {
+      this.audio.playbackRate = rate;
+      this.audio_rate = rate;
+  }
 }
