@@ -67,6 +67,13 @@ def get_model_files():
     
     return sorted(model_files, key=lambda x: x["filename"])
 
+def cleanup_old_audio_files(max_age_hours=1):
+    audio_dir = Path("static/audio")
+    cutoff_time = time.time() - (max_age_hours * (60 * 60))
+
+    for audio_file in audio_dir.glob("tts_output_*.wav"):
+        if audio_file.stat().st_mtime < cutoff_time:
+            audio_file.unlink()
 
 # Webpage routes
 @app.route('/')
@@ -88,9 +95,7 @@ def index():
     # Get available model files
     model_files = get_model_files()
     
-    return render_template('index.html',
-                           model_files=model_files,
-                           voice_loaded=tts_wrapper.is_voice_loaded())
+    return render_template('Tree.html')
 
 
 
@@ -252,6 +257,9 @@ def api_generate():
         file_size = output_path.stat().st_size
         
         logger.info(url_for('serve_audio', filename=filename))
+
+        # Delete old audio files
+        cleanup_old_audio_files(max_age_hours=1)
 
         return {
             "success": True,
