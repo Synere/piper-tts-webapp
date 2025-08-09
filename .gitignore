@@ -17,3 +17,7 @@ split_js_file.js
 INTEGRATION_INSTRUCTIONS.md
 .claude/
 REACT_MIGRATION_GUIDE.md
+
+python/
+
+*.bat
