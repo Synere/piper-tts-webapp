@@ -392,6 +392,7 @@
                         'items': (node) => ({
                             "Create": { "label": "Add Child Node", "action": () => { const n = $tree.jstree(true).create_node(node, { text: 'New Node', data: { content: '' } }); $tree.jstree(true).edit(n); } },
                             "Rename": { "label": "Rename", "action": () => { $tree.jstree(true).edit(node); } },
+                            "CreateSibling": {"label": "Add Sibling Node", "action": () => { const n = $tree.jstree(true).create_node($tree.jstree(true).get_parent(node), { text: 'New Sibling Node', data: { content: '' } }); $tree.jstree(true).edit(n);  } },
                             "Delete": { "label": "Delete Node", "separator_before": true, "action": () => { if (confirm('Delete this node and all its children?')) { $tree.jstree(true).delete_node(node); } } }
                         })
                     },
