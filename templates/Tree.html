@@ -194,6 +194,44 @@
             box-shadow: 0 0 0 1px #3b82f6;
         }
 
+        /* TTS Virtual Mic button styles */
+        .ql-toolbar .ql-mic {
+            width: auto;
+            display: inline-flex !important;
+            align-items: center !important;
+        }
+        .ql-toolbar .ql-mic button {
+            background: #3b82f6;
+            color: white;
+            width: auto;
+            
+            border: 1px solid #3b82f6;
+            border-radius: 3px;
+            padding: 2px 8px;
+            font-size: 12px;
+            height: 24px;
+            outline: none;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .ql-toolbar .ql-mic button:hover {
+            background: #2563eb;
+            border-color: #2563eb;
+        }
+        .ql-toolbar .ql-mic button.connected {
+            background: #dc2626;
+            border-color: #dc2626;
+        }
+        .ql-toolbar .ql-mic button.connected:hover {
+            background: #b91c1c;
+            border-color: #b91c1c;
+        }
+        .ql-toolbar .ql-mic button:disabled {
+            opacity: 0.4;
+            pointer-events: none;
+            background: #9ca3af;
+            border-color: #9ca3af;
+        }
 
     </style>
 </head>
@@ -291,7 +329,7 @@
                             ['bold', 'italic', 'underline'], 
                             [{ 'list': 'ordered'}, { 'list': 'bullet' }], 
                             ['clean'],
-                            ['speak', 'pause', 'resume', 'stop', 'speed']
+                            ['mic', 'speak', 'pause', 'resume', 'stop', 'speed']
                         ],
                         handlers: {
                             'speak': () => {
@@ -328,6 +366,41 @@
                 speedSelect.addEventListener('change', function() {
                     const speed = parseFloat(this.value);
                     synth.setPlaybackRate(speed);
+                });
+            }
+
+            // Add custom button to connect to virtual microphone
+            const virtualMicrophoneButton = toolbar.container.querySelector('.ql-mic');
+            if (virtualMicrophoneButton) {
+                virtualMicrophoneButton.innerHTML = `
+                    <button class="ql-mic" >
+                        Enable Virtual Mic
+                    </button>
+                `;
+
+                // Add event listener for mic button
+                virtualMicrophoneButton.addEventListener('click', async function() {
+                    if (!synth.microphoneEnabled) {
+                        try {
+                            const stream = synth.enableVirtualMicrophone();
+                            this.textContent = 'Disable Virtual Mic';
+                            this.classList.add('connected');
+
+                            // Store stream globally for access by Google Meets
+                            window.ttsVirtualMicrophone = stream;
+                            console.log(`Virtual microphone enabled. Stream available as 
+            window.ttsVirtualMicrophone`);
+
+                        } catch (error) {
+                            console.error('Failed to enable virtual microphone:', error);
+                        }
+                    } else {
+                        synth.disableVirtualMicrophone();
+                        this.textContent = 'Enable Virtual Mic';
+                        this.classList.remove('connected');
+                        delete window.ttsVirtualMicrophone;
+                        console.log('Virtual microphone disabled');
+                    }
                 });
             }
 

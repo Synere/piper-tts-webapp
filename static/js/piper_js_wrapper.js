@@ -8,6 +8,14 @@ class PiperTTSWrapper {
         this.modelLoaded = false;
         this.initializeModel();
         
+        // Virtual Microphone
+        this.audioContext = null;
+        this.mediaStreamDestination = null;
+        this.virtualMicStream = null;
+        this.microphoneEnabled = false;
+
+        this.initializeWebAudio();
+        
         // Setup audio event end listener
         this.audio.addEventListener('ended', () => {
             this.speaking = false;
@@ -19,6 +27,12 @@ class PiperTTSWrapper {
         
     }
     
+    async initializeWebAudio() {
+        this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        this.mediaStreamDestination = this.audioContext.createMediaStreamDestination();
+        this.virtualMicStream = this.mediaStreamDestination.stream;
+    }
+
     async initializeModel() {
         try {
             // Load default.onnx model automatically
@@ -65,6 +79,17 @@ class PiperTTSWrapper {
             if (result.success) {
                 this.audio.src = result.audio_url;
                 this.audio.playbackRate = this.audio_rate;
+
+                // Virtual Microphone
+                if (this.microphoneEnabled && this.audioContext) {
+                    const audioSource = this.audioContext.createMediaElementSource(this.audio);
+                    const gainNode = this.audioContext.createGain();
+
+                    audioSource.connect(gainNode);
+                    gainNode.connect(this.mediaStreamDestination);
+                    gainNode.connect(this.audioContext.destination);
+                }
+
                 this.audio.play();
             } else {
                 this.speaking = false;
@@ -99,7 +124,20 @@ class PiperTTSWrapper {
     }
 
     setPlaybackRate(rate) {
-      this.audio.playbackRate = rate;
-      this.audio_rate = rate;
-  }
+        this.audio.playbackRate = rate;
+        this.audio_rate = rate;
+    }
+
+    enableVirtualMicrophone() {
+        this.microphoneEnabled = true;
+        return this.virtualMicStream;
+    }
+
+    disableVirtualMicrophone() {
+        this.microphoneEnabled = false;
+    }
+
+    getVirtualMicrophoneStream() {
+        return this.virtualMicStream;
+    }
 }
