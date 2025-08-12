@@ -1,5 +1,6 @@
 import logging
 import time
+import hashlib
 
 from pathlib import Path
 from flask import Flask, render_template, request, url_for, send_file
@@ -241,17 +242,21 @@ def api_generate():
     try:
         data = request.get_json()
         text = data.get('text', '').strip()
+        text_hash = hashlib.sha256(text.encode('utf-8')).hexdigest()
         
         if not tts_wrapper.is_voice_loaded():
             return {"success": False, "error": "No voice model loaded"}
         
         # Generate unique filename
-        timestamp = int(time.time())
-        filename = f"tts_output_{timestamp}.wav"
+        filename = f"tts_output_{text_hash}.wav"
         output_path = Path("static/audio") / filename
         
-        # Generate speech
-        tts_wrapper.synthesize_wav_from_string(text, output_path)
+        # Check if cached file exists
+        if output_path.exists():
+            logger.info(f"Using cached audio: {filename}")
+        else:
+            # Generate speech
+            tts_wrapper.synthesize_wav_from_string(text, output_path)
         
         # Get audio file info
         file_size = output_path.stat().st_size
@@ -259,7 +264,7 @@ def api_generate():
         logger.info(url_for('serve_audio', filename=filename))
 
         # Delete old audio files
-        cleanup_old_audio_files(max_age_hours=1)
+        cleanup_old_audio_files(max_age_hours=24*7)
 
         return {
             "success": True,
