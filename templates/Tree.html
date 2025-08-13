@@ -174,26 +174,31 @@
             pointer-events: none;
         }
         
-        /* TTS Speed dropdown styles */
-        .ql-toolbar .ql-speed {
-            width: auto;
-            display: inline-flex !important;
-            align-items: center !important;
-        }
-        .ql-toolbar .ql-speed select {
-            background: white;
-            border: 1px solid #ccc;
-            border-radius: 3px;
-            padding: 2px 6px;
-            font-size: 12px;
-            height: 24px;
-            outline: none;
-        }
-        .ql-toolbar .ql-speed select:focus {
-            border-color: #3b82f6;
-            box-shadow: 0 0 0 1px #3b82f6;
+        .ql-toolbar .ql-speed .ql-picker-label {
+            border: 1px solid #ccc !important;
+            border-radius: 3px !important;
+            padding: 2px 18px 2px 8px !important;
+            background: white !important;
+            min-width: 30px !important;
         }
 
+        .ql-toolbar .ql-speed .ql-picker-label:hover {
+            border-color: #999 !important;
+        }
+
+        .ql-toolbar .ql-speed .ql-picker-label:focus {
+            border-color: #3b82f6 !important;
+            box-shadow: 0 0 0 1px #3b82f6 !important;
+            outline: none !important;
+        }
+
+
+        .ql-toolbar .ql-speed .ql-picker-label[data-value="0.9x"]::before { content: '0.9x'; }
+        .ql-toolbar .ql-speed .ql-picker-label[data-value="0.95x"]::before { content: '0.95x'; }
+        .ql-toolbar .ql-speed .ql-picker-label[data-value="1x"]::before { content: '1x'; }
+        .ql-toolbar .ql-speed .ql-picker-label[data-value="1.25x"]::before { content: '1.25x'; }
+        .ql-toolbar .ql-speed .ql-picker-label[data-value="1.5x"]::before { content: '1.5x'; }
+        .ql-toolbar .ql-speed .ql-picker-label[data-value="2x"]::before { content: '2x'; }
 
     </style>
 </head>
@@ -291,7 +296,8 @@
                             ['bold', 'italic', 'underline'], 
                             [{ 'list': 'ordered'}, { 'list': 'bullet' }], 
                             ['clean'],
-                            ['speak', 'pause', 'resume', 'stop', 'speed']
+                            ['speak', 'pause', 'resume', 'stop'],
+                            [{ 'speed': ['0.9x', '0.95x', '1x', '1.25x', '1.5x', '2x'] }]
                         ],
                         handlers: {
                             'speak': () => {
@@ -300,7 +306,27 @@
                             },
                             'pause': () => { synth.pause(); updateTTSButtons(); },
                             'resume': () => { synth.resume(); updateTTSButtons(); },
-                            'stop': () => { synth.cancel(); updateTTSButtons(); }
+                            'stop': () => { synth.cancel(); updateTTSButtons(); },
+                            'speed': (n) => {
+                                const speedMap = {
+                                    '0.9x': 0.9,
+                                    '0.95x': 0.95,
+                                    '1x': 1,
+                                    '1.25x': 1.25,
+                                    '1.5x': 1.5,
+                                    '2x': 2
+                                };
+                                synth.setPlaybackRate(speedMap[n] || 1);
+
+                                const toolbar = quill.getModule('toolbar');
+                                const speedPicker = toolbar.container.querySelector('.ql-speed');
+                                if (speedPicker) {
+                                    const label = speedPicker.querySelector('.ql-picker-label');
+                                    if (label) {
+                                        label.setAttribute('data-value', n); // This triggers the CSS
+                                    }
+                                }
+                            }
                         }
                     }
                 },
@@ -308,28 +334,20 @@
             });
             quill.disable();
 
-            // Add custom speed dropdown to toolbar
             const toolbar = quill.getModule('toolbar');
-            const speedButton = toolbar.container.querySelector('.ql-speed');
-            if (speedButton) {
-                speedButton.innerHTML = `
-                    <select class="ql-speed-select">
-                        <option value="0.9">0.9x</option>
-                        <option value="0.95">0.95x</option>
-                        <option value="1" selected>1x</option>
-                        <option value="1.25">1.25x</option>
-                        <option value="1.5">1.5x</option>
-                        <option value="2">2x</option>
-                    </select>
-                `;
-                
-                // Add event listener for speed changes
-                const speedSelect = speedButton.querySelector('.ql-speed-select');
-                speedSelect.addEventListener('change', function() {
-                    const speed = parseFloat(this.value);
-                    synth.setPlaybackRate(speed);
+
+            const speedPicker = toolbar.container.querySelector('.ql-speed');
+            if (speedPicker) {
+                // Source-backed: Direct textContent assignment for picker items
+                const items = speedPicker.querySelectorAll('.ql-picker-item');
+                items.forEach(item => {
+                    const value = item.getAttribute('data-value');
+                    if (value) {
+                        item.textContent = value; // Exact method from sources
+                    }
                 });
             }
+
 
             const speakText = (text) => {
                 if (synth.speaking) synth.cancel();
