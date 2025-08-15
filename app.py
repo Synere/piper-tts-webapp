@@ -217,6 +217,7 @@ def api_generate():
     Expected JSON payload:
         {
             "text": str  # Text to convert to speech
+            "play: bool # Play or just generate
         }
     
     Returns:
@@ -242,6 +243,7 @@ def api_generate():
     try:
         data = request.get_json()
         text = data.get('text', '').strip()
+        play_audio = data.get('play')
         text_hash = hashlib.sha256(text.encode('utf-8')).hexdigest()
         
         if not tts_wrapper.is_voice_loaded():
@@ -252,7 +254,7 @@ def api_generate():
         output_path = Path("static/audio") / filename
         
         # Check if cached file exists
-        if output_path.exists():
+        if output_path.exists() and play_audio:
             logger.info(f"Using cached audio: {filename}")
         else:
             # Generate speech

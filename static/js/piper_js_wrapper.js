@@ -1,6 +1,7 @@
 class PiperTTSWrapper {
     constructor() {
         this.speaking = false;
+        this.generating = false;
         this.paused = false;
         this.audio = document.getElementById('piper-audio');
         this.audio_rate = 1;
@@ -40,7 +41,7 @@ class PiperTTSWrapper {
         }
     }
     
-    async speak(utterance) {
+    async speak(utterance, play_audio) {
         if (!this.modelLoaded) {
             console.error('PiperTTS model not loaded');
             if (utterance.onerror) utterance.onerror(new Error('Model not loaded'));
@@ -51,18 +52,21 @@ class PiperTTSWrapper {
         
         try {
             this.currentUtterance = utterance;
-            this.speaking = true;
+            this.generating = true;
             
             // Generate speech via API
             const response = await fetch('/api/generate', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({text: utterance.text})
+                body: JSON.stringify({text: utterance.text, play: play_audio})
             });
             
             const result = await response.json();
             
-            if (result.success) {
+            this.generating = false;
+            
+            if (result.success && play_audio) {
+                this.speaking = true;
                 this.audio.src = result.audio_url;
                 this.audio.playbackRate = this.audio_rate;
                 this.audio.play();
