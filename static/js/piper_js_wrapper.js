@@ -27,7 +27,7 @@ class PiperTTSWrapper {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({
-                    model_path: 'models/en-us_ritche-200judicial-vs0.1-medium.onnx',
+                    model_path: 'models/model.onnx',
                     use_cuda: true
                 })
             });

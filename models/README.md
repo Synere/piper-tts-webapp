@@ -1,3 +1,3 @@
 Put the model files here
 
-Names should be *.onnx and *.onnx.json
+Names should be model.onnx and model.onnx.json
