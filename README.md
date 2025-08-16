@@ -6,17 +6,6 @@ A text-to-speech web application designed for judicial professionals, built usin
 
 This system enables judges and court personnel to generate high-quality, personalized text-to-speech audio using their own voice models.
 
-### Core Components
-
-1. **PiperPythonWrapper**: Python wrapper for PiperTTS functionality
-2. **Flask Web Application**: REST API and web interface
-
-### Technology Stack
-
-- **Backend**: Python, Flask
-- **TTS Engine**: PiperTTS
-- **Frontend**: HTML, CSS, JavaScript
-
 ### Installation
 
 1. **Clone the repository**
@@ -26,21 +15,7 @@ This system enables judges and court personnel to generate high-quality, persona
    ```
 
 2. **Create virtual environment**
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # Linux/Mac
-   # or
-   venv\Scripts\activate     # Windows
-   ```
-
-3. **Install dependencies**
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-4. **Run the application**
-   ```bash
-   python app.py
+   ``` .\start_server.bat
    ```
 
 5. **Access the web interface**
