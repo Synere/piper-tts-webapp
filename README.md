@@ -15,5 +15,6 @@ This system enables judges and court personnel to generate high-quality, persona
    ```
 
 2. **Run server**
-   ``` .\start_server.bat
+   ```bash
+   .\start_server.bat
    ```
