@@ -14,7 +14,11 @@ This system enables judges and court personnel to generate high-quality, persona
    cd piper-tts-judicial-webapp
    ```
 
-2. **Run server**
+2. **Put model files into models/**
+
+   See models/README.md
+
+3. **Run server**
    ```bash
    .\start_server.bat
    ```
